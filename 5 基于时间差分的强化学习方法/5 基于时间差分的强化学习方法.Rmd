@@ -1,0 +1,148 @@
+---
+title: "基于时间差分强化学习算法"
+author: "吴羽暄"
+date: "2023/6/18"
+output: html_document
+---
+
+##### 5.1 基于时间差分强化学习算法理论讲解p99-114
+
+1.
+
+&ensp; &ensp; 第4章中已经提到，除了蒙特卡洛方法，无模型的强化学习方法还有时间差分法(Temporal-Difference，简称TD)，与蒙特卡洛方法相比，其主要不同在于值函数的估计。
+
+&ensp; &ensp; 时间差分方法(TD)的精髓就是借鉴动态规划中bootstrapping的方法，在试验未结束时就估计当前的值函数，即结合了蒙特卡罗的采样方法（做试验）和动态规划方法的bootstrapping（利用后继状态的值函数估计当前值函数）。用时间差分方法(TD)将值函数的公式更新为：$V(S_t)←V(S_t)+\alpha(R_{t+1}+\gamma V(S_{t+1})-V(S_t))$(计算过程如图5.4)
+
+&ensp; &ensp; 其中，$R_{t+1}+\gamma V(S_{t+1})$称为TD目标，与蒙特卡洛中的$G_t$相对应，两者不同之处是TD目标利用了bootstrapping⽅法估计当前值函数。$\delta_t=R_{t+1}+\gamma V(S_{t+1})-V(S_t)$称为TD偏差。
+
+2.从值函数的原始公式出发(图5.5)
+
+&ensp; &ensp; 图5.5是⽤三种⽅法估计值函数的异同点。从中可以看到，蒙特卡罗的⽅法使⽤的是值函数最原始的定义，该⽅法利⽤所有回报的累积和估计值函数；动态规划⽅法和时间差分⽅法则利⽤⼀步预测方法计算当前状态值函数，它俩的共同点是利⽤了bootstrapping⽅法；不同的是，动态规划⽅法利⽤模型计算后继状态，时间差分⽅法利⽤试验得到后继状态。
+
+&ensp; &ensp; 从统计学的角度来看，蒙特卡罗方法(MC)和时间差分方法(TD)都是利用样本估计值函数的方法，哪种更好呢？既然都是统计方法，我们就可以从期望和方差两个指标对比两种方法。
+
+**蒙特卡洛：**
+
+&ensp; &ensp; 返回值为：$G_t=R_{t+1}+\gamma R_{t+2}+ \dots +\gamma^{T-1}R_T$无偏估计；但要等到最终状态(T)出现时才能得到期望的估计，在这个过程中会经历很多随机的状态和动作，每次得到的$G_t$随机性很⼤，因此尽管期望等于真值，但⽅差⽆穷⼤。
+
+**时间差分：**
+
+&ensp; &ensp; TD目标为$R_{t+1}+\gamma V(S_{t+1})$，若$V(S_{t+1})$采⽤真实值，则TD估计也是⽆偏估计，然⽽在试验中$V(S_{t+1})$⽤的也是估计值，因此时间差分估计⽅法属于有偏估计。与蒙特卡罗⽅法相⽐，时间差分⽅法只⽤到了⼀步随机状态和动作，因此TD⽬标的随机性⽐蒙特卡罗⽅法中的$G_t$要⼩，相应的⽅差也⽐蒙特卡罗⽅法中的⽅差⼩。
+
+&ensp; &ensp; 时间差分⽅法包括同策略的Sarsa⽅法和异策略的Qlearning⽅法。如图5.6所⽰为同策略Sarsa强化学习算法，需要注意的是⽅框中代码表⽰同策略中的⾏动策略和评估的策略都是ε-greedy策略。与蒙特卡罗⽅法不同的是，它的值函数更新不同。
+
+&ensp; &ensp; 如图5.7所⽰为异策略的Qlearning⽅法。与Sarsa⽅法的不同之处在于，Qlearning⽅法是异策略的⽅法，即⾏动策略采⽤ε-greedy策略，⽽⽬标策略为贪婪策略。
+
+&ensp; &ensp; 如图5.6和图5.7所示，Sarsa⽅法与Qlearning⽅法最大的不同为：Sarsa⽅法的行动策略、评估策略都是$\epsilon$贪婪策略，而Qlearning⽅法的行动策略为$\epsilon$贪婪策略，目标策略为贪婪策略。
+
+补充：一幕=一次试验；$\epsilon$贪婪策略和贪婪策略都是常用的随机策略(即概率分布)
+
+&ensp; &ensp; a.贪婪策略
+$$\pi^*(a|s)=\begin{cases}1 \quad if \quad a=\arg \max \limits_ {a\in A} q^*(s,a) \\0 \quad othewise\end{cases}$$&ensp; &ensp; 一个确定性策略，即只有在使得状态-动作值函数最大的动作a处取概率为1。
+
+&ensp; &ensp; b. $\epsilon-greedy$策略
+$$\pi(a|s)\leftarrow\begin{cases}1-\epsilon+\frac{\epsilon}{|A(s)|} \quad if \quad a=\arg \max \limits_ {a\in A} Q(s,a) \\0 \quad\quad\quad\quad\quad\quad if \quad a\neq \arg \max \limits_ {a\in A} Q(s,a)\end{cases}$$&ensp; &ensp; 选取使得状态-动作值函数最大的动作的概率为$1-\epsilon+\frac{\epsilon}{|A(s)|}$，而其他动作概率为等概率$\frac{\epsilon}{|A(s)|}$
+
+3.$TD(\lambda)$方法
+
+&ensp; &ensp; 如图5.4，在更新当前值函数时，⽤到了下⼀个状态的值函数，那么由此可推，我们可以利⽤后继第⼆个状态的值函数来更新当前状态的值函数。公式计算如下：
+
+&ensp; &ensp; 首先，用$G_t^{(1)}=R_{t+1}+\gamma V(S_{t+1})$表示TD目标，利⽤第二步值函数来估计当前值函数可表⽰为：$G_t^{(2)}=R_{t+1}+\gamma R_{t+2}+\gamma ^2V(S_{t+1})$，以此类推，利⽤第n步(注意，是第n步，不是后面的n步)的值函数更新当前值函数可表⽰为：$$G_t^{(n)}=R_{t+1}+\gamma R_{t+2}+\dots +\gamma ^{n-1}R_{t+n}+\gamma ^nV(S_{t+n})$$
+&ensp; &ensp; 如图5.8所⽰为利⽤n步值函数估计当前值函数的⽰意图。我们审视⼀下刚才的结论：可以利⽤n步值函数来估计当前值函数，也就是说当前值函数有n种估计⽅法，但并不知道哪种估计值更接近真实值。
+
+&ensp; &ensp; 考虑用$TD(\lambda)$的方法，即利⽤加权的⽅法融合这n个估计值：
+
+&ensp; &ensp; 在$G_t^{(n)}$前乘以加权因子$(1-\lambda)\lambda^{n-1}$，这是因为考虑：公式(5.4)利用$G_t^{\lambda}$更新当前状态的值函数的⽅法称为$TD(\lambda)$的方法，一般可以从两个视⾓理解：
+
+(1)前向视角解释：人坐在状态流上，看前方(图5.9)
+
+&ensp; &ensp; 假设⼀个⼈坐在状态流上拿着望远镜看前⽅，前⽅是将来的状态。前向观点通过“观看”将来状态的值函数来估计当前的值函数。
+
+&ensp; &ensp; 利⽤前向观点估计值函数时，计算⽤到了将来时刻的值函数，因此需要整个试验结束后才能计算，这和蒙特卡罗⽅法相似。故期待可以找到某种更新⽅法不需要等到试验结束就可以更新当前状态的值函数，即有$！$这种增量式的更新⽅法，这就需要利用后向观点了。
+
+(2)后向视角解释：人坐在状态流上，向后喊(图5.10)
+
+&ensp; &ensp; ⼈骑坐在状态流上，⼿⾥拿着话筒，⾯朝[已经经历过]的状态流，获得[当前回报]并利⽤下⼀个状态的值函数得到TD偏差($\delta_t=R_{t+1}+\gamma V(S_{t+1})-V(S_t)$)后，此⼈会向已经经历过的状态喊话，告诉这些状态处的值函数需要利⽤当前时刻的TD偏差更新。此时过往的每个状态值函数更新的⼤⼩应该与距离当前状态的步数有关。
+
+&ensp; &ensp; 假设当前状态为$s_t$，那么$s_{t-1}$处的值函数更新应该乘以一个衰减因⼦$\gamma\lambda$，$s_{t-2}$处的值函数更新应该乘以$(\gamma\lambda)^2$，以此类推。
+
+&ensp; &ensp; $TD(\lambda)$更新过程如下：
+
+&ensp; &ensp; ⾸先，计算当前状态的TD偏差：$\delta_t=R_{t+1}+\gamma V(S_{t+1})-V(S_t)$
+
+&ensp; &ensp; 其次，更新适合度轨迹：$E_t(s)=\begin{cases}\gamma\lambda E_{t-1}, \quad \quad \quad if \quad s\neq s_t \\\gamma\lambda E_{t-1}+1, \quad if \quad s = s_t\end{cases}$
+
+&ensp; &ensp; 最后，对于状态空间中的每个状态s，更新值函数：$$V(s)←V(s)+\alpha\delta_tE_t(s)$$其中$E_t(s)$称为[适合度轨迹]。
+
+(3)比较两个观点的异同
+
+&ensp; &ensp; a.前向观点需要等到[⼀次试验之后]再更新当前状态的值函数；后向观点不需要等到值函数结束后再更新值函数，⽽是[每⼀步都在更新]值函数，是增量式⽅法。
+
+&ensp; &ensp; b.前向观点在⼀次试验结束后更新值函数时，[更新完当前状态的值函数后，此状态的值函数就不再改变]。后向观点在每⼀步计算完当前的TD误差后，[其他状态的值函数]需要利⽤当前状态的TD误差[更新]。
+
+&ensp; &ensp; c.在[⼀次试验结束]后，前向观点和后向观点每个状态的值函数的[更新总量]是相等的，都是$G_t^\lambda$，公式证明如下：
+
+&ensp; &ensp; ⾸先，当$\lambda=0$时，只有当前状态值更新，此时等价于之前说的TD⽅法。所以TD⽅法⼜称为TD(0)⽅法。
+
+&ensp; &ensp; 其次，当$\lambda=1$时，状态s值函数总的更新与蒙特卡罗⽅法下的更新总数相同：
+$$\begin{aligned}
+&\delta_t+\gamma \delta_{t+1}+\gamma^2 \delta_{t+2}+\cdots+\gamma^{T-1-t} \delta_{T-1}\\
+&=R_{t+1}+\gamma V(S_{t+1})-V(S_t)\\
+&+\gamma R_{t+2}+\gamma^2 V(S_{t+2})-\gamma V(S_{t+1})\\
+&+\gamma^2R_{t+3}+\gamma^3 V(S_{t+3})-\gamma^2V(S_{t+2})\\
+&\quad \vdots\\
+&+\gamma^{T-1-t}R_T+\gamma^{T-t}V(S_T)-\gamma^{T-1-t}V(S_{T-1}) \\
+\end{aligned}$$
+&ensp; &ensp; 对于一般的$\lambda$，前向观点等于后向观点：
+【截图】
+
+(4)最后，给出$Sarsa(\lambda)$算法的伪代码(图5.11)
+
+
+#### 5.2 基于Python和gym的编程实例(差分强化学习算法)
+
+&ensp; &ensp; 时间差分⽅法和蒙特卡罗⽅法都是⽆模型的⽅法，因此在策略评估时都需要随机模拟。和第4章介绍的蒙特卡罗⽅法⼀样，我们对时间差分的介绍也从策略评估开始。基于时间差分⽅法的模拟与基于蒙特卡罗⽅法的模拟类似，都需要从与环境的交互中获取数据。在做评估时，我们假设已经得到数据。如图5.12所⽰为时间差分⽅法对策略评估的Python代码。这⾥需要注意两个地⽅。
+
+&ensp; &ensp; 第⼀处：在最⾥层的for循环中，处理的是⼀个时间序列，即⼀幕数据。
+
+&ensp; &ensp; 第⼆处：TD更新⽅程为$V(S_t)←V(S_t)+\alpha(R_{t+1}+\gamma V(S_{t+1})-V(S_t))$
+
+&ensp; &ensp; 有了策略评估，再加上策略改善，就可以构造出差分强化学习算法了。图5.13是Sarsa和Qlearning算法的伪代码和Python代码，我们⽐较它们的异同点。
+
+&ensp; &ensp; 从Python实现中我们看到Sarsa算法的⾏动和评估策略都是ε-greedy策略，对评估策略进⾏评估的⽅法是TD⽅法。
+下⾯我们提供异策略的Qlearning算法伪代码和Python实现。
+
+&ensp; &ensp; 如图5.14所⽰为Qlearning算法的伪代码和Python实现。与Sarsa算法不同的是，Qlearning是异策略强化学习算法，即⾏动策略为ε-greedy策略评估策略为贪婪策略。
+
+&ensp; &ensp; 在Qlearning算法中，最关键的代码实现包括：⾏为值函数的表⽰，探索环境的策略，值函数更新时贪婪策略，值函数更新。下⾯⼀⼀介绍：
+
+&ensp; &ensp; （1）Qlearning的⾏为值函数表示。
+
+&ensp; &ensp; 对于表格型强化学习算法，值函数是⼀张表格。对于⾏为值函数，这张表可以看成是⼆维表，其中⼀维为状态，另一维为动作。下⾯以机器⼈找⾦币为例说明。
+
+&ensp; &ensp; 状态空间为[1，2，3，4，5，6，7，8]
+
+&ensp; &ensp; 动作空间为[‘n’，‘e’，’s’，’w’]
+
+&ensp; &ensp; ⾏为值函数可以⽤字典数据类型来表⽰，其中字典的索引由状态-⾏为对来表⽰。因此⾏为值函数的初始化为
+【截图】
+
+&ensp; &ensp; （2）探索环境的策略：epsilon贪婪策略。
+
+&ensp; &ensp; 智能体通过ε-greedy策略来探索环境，ε-greedy策略的数学表达式为：$$\pi(a|s)\leftarrow\begin{cases}1-\epsilon+\frac{\epsilon}{|A(s)|} \quad if \quad a=\arg \max \limits_ {a\in A} Q(s,a) \\0 \quad\quad\quad\quad\quad\quad if \quad a\neq \arg \max \limits_ {a\in A} Q(s,a)\end{cases}$$
+&ensp; &ensp; 该式的Python代码实现：
+【截图】
+
+&ensp; &ensp; （3）值函数更新时，选择动作的贪婪策略。
+
+&ensp; &ensp; 选择动作的贪婪策略就是选择状态为s’时，值函数最⼤的动作。其Python实现为：
+【截图】
+
+&ensp; &ensp; 该段代码与上段代码⼏乎⼀样，不同的是所取的状态值不⼀样。该段代码的状态是当前状态s的下⼀个状态s'。
+
+&ensp; &ensp; （4）值函数的更新。
+
+&ensp; &ensp; 值函数更新公式：$$Q(s_t,a_t)←Q(s_t,a_t)+\alpha[r_t+\gamma \max \limits_a Q(s_{t+1},a)-Q(s_t,a_t)]$$
+
+&ensp; &ensp; 代码实现：
+【截图】
